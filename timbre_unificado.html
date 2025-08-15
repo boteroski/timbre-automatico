@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sistema de Timbre Automático</title>
+  <style>
+    /* === VARIABLES CSS PARA TEMAS === */
+    :root {
+      /* Tema claro */
+      --bg-image: url('img/fondoP.png');
+      --primary-bg: #022345;
+      --primary-color: #85e7fd;
+      --secondary-color: #00ffff;
+      --accent-color: #015ebb;
+      --accent-text: #02d0fe;
+      --button-gradient-start: #3498db;
+      --button-gradient-end: #0066cc;
+      --modal-bg: #002f4f;
+      --modal-border: #00ffff;
+      --input-bg: #003366;
+      --timeline-gradient-start: #00ffff;
+      --timeline-gradient-end: #0080ff;
+      --shadow-color: rgba(255,255,255,0.6);
+      --bubble-shadow: #00ffff;
+      --primaria-hex-color: #87ceeb;
+      --secundaria-hex-color: #1e3a8a;
+    }
+
+    /* Tema oscuro */
+    [data-theme="dark"] {
+      --bg-image: url('img/panal.jpg');
+      --primary-bg: #001f3f;
+      --primary-color: #00d2ff;
+      --secondary-color: #00d2ff;
+      --accent-color: #0077ff;
+      --accent-text: white;
+      --button-gradient-start: #001f3f;
+      --button-gradient-end: #0066cc;
+      --modal-bg: #001f3f;
+      --modal-border: #00d2ff;
+      --input-bg: #002244;
+      --timeline-gradient-start: #00d2ff;
+      --timeline-gradient-end: #0077ff;
+      --shadow-color: rgba(0,0,0,0.5);
+      --bubble-shadow: #00d2ff;
+      --primaria-hex-color: #60a5fa;
+      --secundaria-hex-color: #1e40af;
+    }
+
+    /* === ESTILOS BASE === */
+    html, body {
+      margin: 0;
+      font-family: Verdana, Geneva, sans-serif;
+      background-image: var(--bg-image);
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center center;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+      transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* === EFECTO TRANSICIÓN TEMA === */
+    .theme-transition {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.2) 15%, rgba(255,255,255,0.1) 30%, transparent 60%);
+      pointer-events: none;
+      opacity: 0;
+      z-index: 1000;
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: rippleEffect 0.8s ease-out;
+    }
+
+    .theme-transition.active { opacity: 1; }
+
+    @keyframes rippleEffect {
+      0% { transform: scale(0.1); opacity: 0.8; }
+      50% { opacity: 0.5; }
+      100% { transform: scale(3); opacity: 0; }
+    }
+
+    /* === CONTROLES SUPERIORES === */
+    .top-controls {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 100;
+    }
+
+    /* Logo del colegio */
+    .logo-container {
+      width: 90px;
+      height: 90px;
+      top:-10px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: white;
+      box-shadow: 0 0 10px var(--secondary-color);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .logo-container:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px var(--secondary-color);
+    }
+    
+    .logo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Altura uniforme para controles */
+    .digital-clock, .next-timbre, .center-button, .theme-toggle, .sound-selector {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Reloj y próximo timbre */
+    .digital-clock, .next-timbre {
+      position: absolute;
+      padding: 10px 20px;
+      font-size: 20px;
+      background: var(--primary-bg);
+      color: var(--primary-color);
+      border-radius: 10px;
+      box-shadow: 0 4px 10px var(--shadow-color);
+      text-align: center;
+    }
+
+    .digital-clock { 
+      top: 20px; 
+      right: 20px; 
+      min-width: 40px;
+      min-height: 30px;
+    }
+
+    .next-timbre { 
+      top: 20px; 
+      right: 160px; 
+      min-width: 20px;
+      min-height: 30px;
+      height: 30px;
+      max-height: 30px;
+    }
+
+    /* Botón principal timbre */
+    .center-button {
+      position: absolute;
+      top: 20px;
+      left: 55%;
+      transform: translateX(-50%);
+      background: var(--accent-color);
+      color: var(--accent-text);
+      padding: 15px 30px;
+      border: none;
+      border-radius: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 10px var(--shadow-color);
+    }
+    
+    .center-button:hover { 
+      transform: translateX(-50%) scale(1.05); 
+      box-shadow: 0 6px 20px var(--secondary-color);
+    }
+
+    /* Botones circulares (tema y sonido) */
+    .theme-toggle, .sound-selector {
+      width: 60px;
+      height: 60px;
+      top:-10px;
+      border-radius: 50%;
+      background: var(--primary-bg);
+      border: 2px solid var(--secondary-color);
+      color: var(--primary-color);
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px var(--shadow-color);
+      position: relative;
+      overflow: visible;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .theme-toggle:hover, .sound-selector:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 20px var(--secondary-color);
+    }
+
+    /* Animación iconos tema */
+    .theme-toggle .icon {
+      transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      position: absolute;
+    }
+
+    .theme-toggle .sun-icon {
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
+
+    .theme-toggle .moon-icon {
+      opacity: 0;
+      transform: rotate(180deg) scale(0);
+    }
+
+    [data-theme="dark"] .theme-toggle .sun-icon {
+      opacity: 0;
+      transform: rotate(-180deg) scale(0);
+    }
+
+    [data-theme="dark"] .theme-toggle .moon-icon {
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
+
+    /* === SELECTOR DE SONIDOS === */
+    .sound-dropdown {
+      position: absolute;
+      top: 30px;
+      left: 0;
+      background: var(--modal-bg);
+      border: 2px solid var(--modal-border);
+      border-radius: 15px;
+      min-width: 220px;
+      box-shadow: 0 0 25px var(--modal-border);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-20px) scale(0.9);
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      z-index: 1001;
+      backdrop-filter: blur(10px);
+      pointer-events: none;
+    }
+
+    .sound-dropdown.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .sound-option {
+      padding: 15px 18px;
+      color: var(--primary-color);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sound-option:last-child {
+      border-bottom: none;
+      border-radius: 0 0 13px 13px;
+    }
+
+    .sound-option:first-child {
+      border-radius: 13px 13px 0 0;
+    }
+
+    .sound-option::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--secondary-color), transparent);
+      transition: width 0.3s ease;
+    }
+
+    .sound-option:hover::before { width: 100%; }
+
+    .sound-option:hover {
+      color: var(--modal-bg);
+      transform: translateX(8px);
+      background: var(--secondary-color);
+    }
+
+    .sound-option.active {
+      background: var(--secondary-color);
+      color: var(--modal-bg);
+      font-weight: bold;
+    }
+
+    .file-input { display: none; }
+
+    .file-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    /* === SELECTOR TIPO (PRIMARIA/AMBOS/SECUNDARIA) === */
+    .type-toggle {
+      position: absolute;
+      top: 20px;
+      left: 260px;
+      display: flex;
+      background: var(--primary-bg);
+      border: 2px solid var(--secondary-color);
+      border-radius: 30px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px var(--shadow-color);
+      height: 50px;
+      transition: all 0.4s ease;
+    }
+
+    .type-toggle button {
+      padding: 15px 20px;
+      background: transparent;
+      border: none;
+      color: var(--primary-color);
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: bold;
+      font-size: 14px;
+      position: relative;
+      overflow: hidden;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 80px;
+    }
+
+    .type-toggle button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: var(--secondary-color);
+      transition: left 0.4s ease;
+      z-index: -1;
+    }
+
+    .type-toggle button.active::before { left: 0; }
+
+    .type-toggle button.active {
+      color: var(--primary-bg);
+      transform: scale(1.05);
+    }
+
+    .type-toggle button:hover:not(.active) {
+      background: rgba(255,255,255,0.1);
+      transform: scale(1.02);
+    }
+
+    /* === BOTONES HEXAGONALES === */
+    .diagonal-buttons {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      gap: 20px;
+      padding: 120px 20px 60px;
+      width: 100%;
+      height: 280px;
+      box-sizing: border-box;
+      scroll-behavior: smooth;
+      align-items: flex-start;
+    }
+
+    /* Scrollbar personalizada */
+    .diagonal-buttons::-webkit-scrollbar { height: 6px; }
+    .diagonal-buttons::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+    .diagonal-buttons::-webkit-scrollbar-thumb {
+      background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
+      border-radius: 10px;
+      box-shadow: 0 0 8px var(--secondary-color);
+    }
+
+    .diagonal-button {
+      flex: 0 0 auto;
+      width: 180px;
+      height: 150px;
+      background: linear-gradient(145deg, var(--button-gradient-start), var(--button-gradient-end));
+      clip-path: polygon(50% 0%, 90% 25%, 90% 75%, 50% 100%, 10% 75%, 10% 25%);
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Colores específicos para modo "ambos" */
+    .diagonal-button.primaria-type {
+      background: linear-gradient(145deg, var(--primaria-hex-color), #4682b4);
+    }
+
+    .diagonal-button.secundaria-type {
+      background: linear-gradient(145deg, var(--secundaria-hex-color), #0f172a);
+    }
+
+    .diagonal-button::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      transition: all 0.4s ease;
+      transform: translate(-50%, -50%);
+    }
+
+    .diagonal-button:hover::before {
+      width: 200px;
+      height: 200px;
+    }
+
+    .diagonal-button:hover {
+      transform: scale(1.08) translateY(-5px);
+      box-shadow: 0 10px 25px var(--secondary-color);
+    }
+
+    /* === BOTÓN AGREGAR === */
+    .agregar-horario {
+      width: 70px;
+      height: 70px;
+      font-size: 28px;
+      background: linear-gradient(145deg, #02055a, #48b3ff);
+      color: white;
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+    }
+
+    .agregar-horario:hover {
+      transform: scale(1.15) rotate(90deg);
+      box-shadow: 0 12px 35px rgba(40, 167, 69, 0.6);
+    }
+
+    /* === MODAL === */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      inset: 0;
+      background: rgba(0,255,255,0.1);
+      backdrop-filter: blur(8px);
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal-content {
+      background: var(--modal-bg);
+      color: var(--secondary-color);
+      margin: 5% auto;
+      padding: 30px;
+      width: 550px;
+      max-width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      border-radius: 20px;
+      border: 2px solid var(--modal-border);
+      box-shadow: 0 0 30px var(--modal-border);
+      animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(-50px) scale(0.9); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .modal-content h3 {
+      text-align: center;
+      color: var(--secondary-color);
+      margin-bottom: 25px;
+      text-shadow: 0 0 8px var(--modal-border);
+      font-size: 24px;
+    }
+
+    /* Pestañas del modal */
+    .modal-tabs {
+      display: flex;
+      margin-bottom: 25px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--input-bg);
+    }
+
+    .modal-tab {
+      flex: 1;
+      padding: 15px;
+      background: transparent;
+      border: none;
+      color: var(--primary-color);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: bold;
+      position: relative;
+    }
+
+    .modal-tab.active {
+      background: var(--secondary-color);
+      color: var(--modal-bg);
+    }
+
+    .modal-tab:hover:not(.active) {
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* Contenido pestañas */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* === FORMULARIOS === */
+    .form-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .modal-content input[type="text"] {
+      grid-column: 1 / -1;
+      margin-bottom: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      border: 2px solid var(--modal-border);
+      background: var(--input-bg);
+      color: var(--secondary-color);
+      font-weight: bold;
+      font-size: 16px;
+      box-shadow: 0 0 15px rgba(0,255,255,0.3);
+      transition: all 0.3s ease;
+    }
+
+    .modal-content input[type="text"]:focus {
+      outline: none;
+      box-shadow: 0 0 20px var(--modal-border);
+      transform: scale(1.02);
+    }
+
+    .modal-content input[type="time"] {
+      padding: 12px;
+      border-radius: 8px;
+      border: 2px solid var(--modal-border);
+      background: var(--input-bg);
+      color: var(--secondary-color);
+      font-weight: bold;
+      box-shadow: 0 0 10px rgba(0,255,255,0.3);
+      transition: all 0.3s ease;
+    }
+
+    .modal-content input[type="time"]:focus {
+      outline: none;
+      box-shadow: 0 0 15px var(--modal-border);
+    }
+
+    .add-hour-btn {
+      grid-column: 1 / -1;
+      background: linear-gradient(145deg, #28a745, #20c997);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      cursor: pointer;
+      margin: 15px auto;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    .add-hour-btn:hover {
+      transform: scale(1.1) rotate(90deg);
+      box-shadow: 0 6px 20px rgba(40, 167, 69, 0.5);
+    }
+
+    /* === ÁREA SUBIDA ARCHIVOS === */
+    .file-upload-area {
+      border: 2px dashed var(--modal-border);
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      transition: all 0.3s ease;
+      background: var(--input-bg);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .file-upload-area:hover {
+      border-color: var(--secondary-color);
+      box-shadow: 0 0 20px rgba(0,255,255,0.3);
+      transform: scale(1.02);
+    }
+
+    .file-upload-area.dragover {
+      border-color: var(--secondary-color);
+      background: rgba(0,255,255,0.1);
+      transform: scale(1.05);
+    }
+
+    .file-upload-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+      color: var(--secondary-color);
+    }
+
+    .file-upload-text {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .file-upload-subtext {
+      font-size: 14px;
+      opacity: 0.7;
+      margin-bottom: 20px;
+    }
+
+    .file-preview {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      display: none;
+    }
+
+    .file-preview.active { display: block; }
+
+    .preview-controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .preview-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .play-btn {
+      background: var(--secondary-color);
+      color: var(--modal-bg);
+    }
+
+    .remove-btn {
+      background: #dc3545;
+      color: white;
+    }
+
+    .preview-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .modal-content .submit-btn {
+      grid-column: 1 / -1;
+      background: linear-gradient(145deg, var(--accent-color), var(--button-gradient-end));
+      color: var(--accent-text);
+      border: none;
+      font-weight: bold;
+      font-size: 16px;
+      padding: 15px 40px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-top: 20px;
+      box-shadow: 0 4px 15px rgba(0,255,255,0.3);
+      width: 100%;
+    }
+
+    .modal-content .submit-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 25px var(--secondary-color);
+    }
+
+    .close {
+      float: right;
+      font-size: 28px;
+      color: var(--secondary-color);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: -5px;
+    }
+
+    .close:hover {
+      transform: scale(1.2) rotate(90deg);
+      text-shadow: 0 0 10px var(--secondary-color);
+    }
+
+    /* === CONTENEDOR TIMBRE === */
+    .timbre-container {
+      background: rgba(2, 35, 69, 0.95);
+      border-radius: 25px;
+      margin: 80px 20px 30px;
+      padding: 20px;
+      box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+      border: 2px solid rgba(0, 255, 255, 0.3);
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(10px);
+    }
+
+    [data-theme="dark"] .timbre-container {
+      background: rgba(0, 31, 63, 0.95);
+      box-shadow: 0 0 30px rgba(0, 210, 255, 0.4);
+      border: 2px solid rgba(0, 210, 255, 0.3);
+    }
+
+    .timbre-panel {
+      display: flex;
+      align-items: center;
+      gap: 25px;
+    }
+
+    .timbre-hex {
+      min-width: 160px;
+      height: 140px;
+      background: linear-gradient(145deg, var(--primary-bg), var(--button-gradient-end));
+      clip-path: polygon(50% 0%, 90% 25%, 90% 75%, 50% 100%, 10% 75%, 10% 25%);
+      color: var(--secondary-color);
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--bubble-shadow);
+      text-shadow: 0 0 10px var(--secondary-color);
+      text-align: center;
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* === TIMELINE === */
+    .timeline-container {
+      flex-grow: 1;
+      overflow-x: auto;
+      padding-bottom: 15px;
+      position: relative;
+    }
+
+    .timeline-bar {
+      height: 12px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 15px;
+      margin-bottom: 15px;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid var(--secondary-color);
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    .timeline-progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--timeline-gradient-start), var(--timeline-gradient-end));
+      border-radius: 15px;
+      transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 15px var(--timeline-gradient-start);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .timeline-progress::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* Burbujas animadas */
+    .bubble {
+      width: 8px;
+      height: 8px;
+      background: radial-gradient(circle, var(--secondary-color), rgba(255,255,255,0.5));
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      animation: bubbleMove 25s linear infinite;
+      opacity: 0.8;
+      box-shadow: 0 0 6px var(--secondary-color);
+    }
+
+    @keyframes bubbleMove {
+      0% { left: 0; transform: scale(0.3); opacity: 0.2; }
+      50% { opacity: 1; transform: scale(1); }
+      100% { left: calc(100% - 8px); transform: scale(1.3); opacity: 0.3; }
+    }
+
+    .timeline-hours {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      position: relative;
+      width: 100%;
+      padding: 0 15px;
+      box-sizing: border-box;
+    }
+
+    .timeline-hour {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 6px 12px;
+      border-radius: 8px;
+      white-space: nowrap;
+      text-align: center;
+      position: absolute;
+      transform: translateX(-50%);
+      backdrop-filter: blur(5px);
+    }
+
+    .timeline-hour.active {
+      color: var(--secondary-color);
+      font-weight: bold;
+      text-shadow: 0 0 8px var(--secondary-color);
+      background: rgba(0, 255, 255, 0.2);
+      transform: translateX(-50%) scale(1.1);
+      border: 1px solid var(--secondary-color);
+    }
+
+    .timeline-hour.passed {
+      color: #888;
+      opacity: 0.5;
+      transform: translateX(-50%) scale(0.9);
+    }
+
+    /* === ANIMACIONES === */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in-up { animation: fadeInUp 0.6s ease-out; }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .top-controls { gap: 8px; }
+      
+      .logo-container, .theme-toggle, .sound-selector {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+      }
+      
+      .type-toggle {
+        left: 140px;
+        height: 50px;
+      }
+      
+      .type-toggle button {
+        padding: 10px 15px;
+        font-size: 12px;
+        min-width: 60px;
+      }
+      
+      .next-timbre {
+        right: 80px;
+        min-width: 150px;
+        font-size: 10px;
+        height: 50px;
+      }
+
+      .digital-clock {
+        height: 10px;
+        font-size: 10px;
+      }
+      
+      .diagonal-button {
+        width: 150px;
+        height: 120px;
+        font-size: 14px;
+      }
+      
+      .timbre-hex {
+        min-width: 120px;
+        height: 100px;
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <!-- Efecto transición tema -->
+  <div class="theme-transition" id="themeTransition"></div>
+  
+  <!-- Controles superiores -->
+  <div class="top-controls">
+    <!-- Logo colegio -->
+    <div class="logo-container" onclick="location.href='index.php'">
+      <img src="img/escudo.gif" alt="Logo">
+    </div>
+
+    <!-- Botón cambiar tema -->
+    <button class="theme-toggle" id="themeToggle" title="Cambiar tema">
+      <span class="icon sun-icon">☀️</span>
+      <span class="icon moon-icon">🌙</span>
+    </button>
+
+    <!-- Selector sonidos -->
+    <div class="sound-selector" id="soundSelector" title="Seleccionar sonido">
+      🔔
+      <div class="sound-dropdown" id="soundDropdown">
+        <!-- Opción subir archivo personalizado -->
+        <div class="sound-option">
+          <label class="file-label" for="customSound">
+            
+            <input type="file" id="customSound" class="file-input" accept="audio/*">
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selector tipo horario -->
+  <div class="type-toggle">
+    <button class="type-btn active" data-type="primaria">Primaria</button>
+    <button class="type-btn" data-type="ambos">Ambos</button>
+    <button class="type-btn" data-type="secundaria">Secundaria</button>
+  </div>
+
+  <!-- Información tiempo -->
+  <div class="next-timbre" id="next-timbre">Siguiente en: --:--</div>
+  <div class="digital-clock" id="digital-clock">00:00</div>
+  
+  <!-- Botón principal timbre -->
+  <button class="center-button" onclick="playTimbre()">Timbre</button>
+
+  <!-- Contenedor botones horarios -->
+  <section class="diagonal-buttons" id="horarios-section" class="fade-in-up"></section>
+
+  <!-- Panel timeline timbre -->
+  <div class="timbre-container fade-in-up">
+    <div class="timbre-panel">
+      <div class="timbre-hex">Horas del<br>Timbre</div>
+      <div class="timeline-container">
+        <div class="timeline-bar" id="timeline-bar">
+          <div class="timeline-progress" id="timeline-progress"></div>
+        </div>
+        <div class="timeline-hours" id="timeline-hours"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botón agregar horario -->
+  <button class="agregar-horario" id="abrirFormulario" title="Agregar nuevo horario">+</button>
+  
+  <!-- Modal formularios -->
+  <div class="modal" id="formularioModal">
+    <div class="modal-content">
+      <span class="close" id="cerrarFormulario">&times;</span>
+      <h3>Panel de Administración</h3>
+      
+      <!-- Pestañas -->
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="horarios">Agregar Horario</button>
+        <button class="modal-tab" data-tab="archivos">Subir Archivo</button>
+      </div>
+
+      <!-- Formulario horarios -->
+      <div class="tab-content active" id="horarios-tab">
+        <form action="agregar_horario.php" method="POST">
+          <input type="text" name="horario_id" placeholder="Nombre del horario (ej: Horario Lunes)" required>
+          <div class="form-columns">
+            <div class="column" id="column1"></div>
+            <div class="column" id="column2"></div>
+            <button type="button" class="add-hour-btn" id="addHourBtn" title="Agregar más horas">+</button>
+          </div>
+          <input type="hidden" name="tipo" id="tipoHidden" value="primaria">
+          <button type="submit" class="submit-btn">Guardar Horario</button>
+        </form>
+      </div>
+
+      <!-- Formulario subida archivos -->
+      <div class="tab-content" id="archivos-tab">
+        <div class="file-upload-area" id="fileUploadArea">
+          <div class="file-upload-icon">🎵</div>
+          <div class="file-upload-text">Agregar Nuevo Sonido</div>
+          <div class="file-upload-subtext">Arrastra un archivo de audio aquí o haz clic para seleccionar</div>
+          <div class="file-upload-subtext">Formatos soportados: MP3, WAV, OGG, MP4 (máx. 10MB, 2 min)</div>
+          <input type="file" id="fileUploadInput" accept="audio/*" style="display: none;">
+          
+          <!-- Preview archivo -->
+          <div class="file-preview" id="filePreview">
+            <div class="file-info">
+              <strong id="fileName">nombre_archivo.mp3</strong>
+              <div id="fileSize">2.5 MB</div>
+            </div>
+            <audio id="previewAudio" controls style="width: 100%; margin-top: 10px;"></audio>
+            <div class="preview-controls">
+              <button type="button" class="preview-btn play-btn" id="playPreview">▶️ Reproducir</button>
+              <button type="button" class="preview-btn remove-btn" id="removeFile">🗑️ Quitar</button>
+            </div>
+          </div>
+        </div>
+        
+        <button type="button" class="submit-btn" id="uploadFileBtn" style="display: none;">Subir Archivo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Elemento audio -->
+  <audio id="timbre-sound" src="img/timbre.mp3" preload="auto"></audio>
+
+  <script>
+  // === VARIABLES GLOBALES ===
+  let schedule = [];                    // Horarios activos
+  let nextTimbreTime = null;           // Próximo timbre
+  let inputCount = 6;                  // Contador inputs
+  let currentType = 'primaria';        // Tipo actual
+  let currentSound = 'img/timbre.mp3'; // Sonido actual
+  let mouseX = 50, mouseY = 50;        // Posición mouse para efecto tema
+  let selectedFile = null;             // Archivo seleccionado
+
+  // === RELOJ Y TIMBRE ===
+  function updateClock() {
+    const now = new Date();
+    const timeString = now.toTimeString().slice(0,5);
+    document.getElementById('digital-clock').innerText = timeString;
+    updateTimelineProgress();
+    
+    // Auto-reproducir si coincide horario
+    if (schedule.includes(timeString)) {
+      playTimbre();
+      setTimeout(updateNextTimbre, 1000);
+    }
+  }
+
+  function playTimbre() {
+    const audio = document.getElementById("timbre-sound");
+    audio.src = currentSound;
+    audio.play().catch(e => {
+      console.log('Error playing audio:', e);
+      showTimbreNotification();
+    });
+  }
+
+  // Notificación visual si falla audio
+  function showTimbreNotification() {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: var(--secondary-color); color: var(--primary-bg);
+      padding: 20px 40px; border-radius: 15px; font-size: 24px; font-weight: bold;
+      z-index: 9999; box-shadow: 0 0 30px var(--secondary-color);
+      animation: pulse 0.5s ease-in-out;
+    `;
+    notification.textContent = '🔔 ¡TIMBRE!';
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 2000);
+  }
+
+  // === TEMA ===
+  function toggleTheme() {
+    const body = document.body;
+    const transition = document.getElementById('themeTransition');
+    
+    // Efecto ripple en posición mouse
+    transition.style.setProperty('--mouse-x', mouseX + '%');
+    transition.style.setProperty('--mouse-y', mouseY + '%');
+    transition.classList.add('active');
+    
+    setTimeout(() => {
+      const currentTheme = body.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      body.setAttribute('data-theme', newTheme);
+      
+      // Guardar preferencias
+      localStorage.setItem('theme-preference', newTheme);
+      saveUserPreference('theme', newTheme);
+      
+      setTimeout(() => transition.classList.remove('active'), 400);
+    }, 400);
+  }
+
+  // === SONIDOS ===
+  function toggleSoundDropdown() {
+    document.getElementById('soundDropdown').classList.toggle('active');
+  }
+
+  function selectSound(soundPath) {
+    currentSound = soundPath;
+    
+    // Actualizar opción activa
+    document.querySelectorAll('.sound-option').forEach(opt => opt.classList.remove('active'));
+    const selectedOption = document.querySelector(`[data-sound="${soundPath}"]`);
+    if (selectedOption) selectedOption.classList.add('active');
+    
+    // Configurar audio
+    const audio = document.getElementById("timbre-sound");
+    audio.src = currentSound;
+    audio.load();
+    
+    // Guardar y probar
+    localStorage.setItem('sound-preference', soundPath);
+    saveUserPreference('sound', soundPath);
+    testSound();
+    
+    document.getElementById('soundDropdown').classList.remove('active');
+  }
+
+  function testSound() {
+    const audio = document.getElementById("timbre-sound");
+    audio.currentTime = 0;
+    const playPromise = audio.play();
+    
+    if (playPromise) {
+      playPromise.then(() => {
+        setTimeout(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        }, 2000);
+      }).catch(() => showTimbreNotification());
+    }
+  }
+
+  // Validar archivo audio
+  function validateAudioFile(file) {
+    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/mp4', 'video/mp4'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Tipo de archivo no permitido. Use MP3, WAV, OGG o MP4.');
+      return false;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+      alert('El archivo es demasiado grande. Máximo 10MB.');
+      return false;
+    }
+
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      audio.addEventListener('loadedmetadata', () => {
+        if (audio.duration > 120) {
+          alert('El audio es demasiado largo. Máximo 2 minutos.');
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+      audio.addEventListener('error', () => {
+        alert('Error al validar el archivo de audio.');
+        resolve(false);
+      });
+      audio.src = URL.createObjectURL(file);
+    });
+  }
+
+  // Manejar sonido personalizado
+  async function handleCustomSound(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const isValid = await validateAudioFile(file);
+    if (!isValid) {
+      event.target.value = '';
+      return;
+    }
+    
+    // Mostrar carga
+    const loadingOption = document.createElement('div');
+    loadingOption.className = 'sound-option';
+    loadingOption.innerHTML = '⏳ Subiendo archivo...';
+    loadingOption.style.pointerEvents = 'none';
+    
+    const dropdown = document.getElementById('soundDropdown');
+    const uploadOption = dropdown.querySelector('.sound-option:last-child');
+    dropdown.insertBefore(loadingOption, uploadOption);
+    
+    // Enviar archivo
+    const formData = new FormData();
+    formData.append('custom_sound', file);
+    
+    try {
+      const response = await fetch('upload_sound.php', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await response.json();
+      loadingOption.remove();
+      
+      if (data.success) {
+        currentSound = data.file_path;
+        addCustomSoundOption(data.original_name, data.file_path, true);
+        document.getElementById("timbre-sound").src = currentSound;
+        localStorage.setItem('sound-preference', currentSound);
+        saveUserPreference('sound', currentSound);
+        testSound();
+        document.getElementById('soundDropdown').classList.remove('active');
+        alert('Sonido agregado exitosamente: ' + data.original_name);
+      } else {
+        alert('Error subiendo archivo: ' + data.error);
+      }
+    } catch (error) {
+      loadingOption.remove();
+      console.error('Error uploading sound:', error);
+      alert('Error de conexión. Verifique que el archivo upload_sound.php existe y es accesible.');
+    }
+    
+    event.target.value = '';
+  }
+
+  // Agregar opción sonido al dropdown
+  function addCustomSoundOption(name, path, setActive = true) {
+    const dropdown = document.getElementById('soundDropdown');
+    const uploadOption = dropdown.querySelector('.sound-option:last-child');
+    
+    if (dropdown.querySelector(`[data-sound="${path}"]`)) return;
+    
+    const newOption = document.createElement('div');
+    newOption.className = 'sound-option' + (setActive ? ' active' : '');
+    newOption.dataset.sound = path;
+    newOption.innerHTML = `🎵 ${name}`;
+    
+    if (setActive) {
+      document.querySelectorAll('.sound-option').forEach(opt => opt.classList.remove('active'));
+      newOption.classList.add('active');
+    }
+    
+    dropdown.insertBefore(newOption, uploadOption);
+    newOption.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectSound(path);
+    });
+  }
+
+  // Cargar sonidos personalizados
+  function loadCustomSounds() {
+    fetch('get_custom_sounds.php')
+      .then(response => response.json())
+      .then(sounds => {
+        sounds.forEach(sound => {
+          addCustomSoundOption(sound.name, sound.path, false);
+        });
+      })
+      .catch(error => console.error('Error loading custom sounds:', error));
+  }
+
+  // === TIPOS Y HORARIOS ===
+  function switchType(type) {
+    currentType = type;
+    document.getElementById('tipoHidden').value = type === 'ambos' ? 'primaria' : type;
+    
+    document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-type="${type}"]`).classList.add('active');
+    
+    const container = document.getElementById("horarios-section");
+    container.style.opacity = '0.5';
+    setTimeout(() => {
+      loadHorarios();
+      container.style.opacity = '1';
+    }, 200);
+  }
+
+  function loadHorarios() {
+    if (currentType === 'ambos') {
+      loadHorariosAmbos();
+      return;
+    }
+    
+    fetch(`obtener_horarios.php?tipo=${currentType}`)
+      .then(res => res.json())
+      .then(data => {
+        const container = document.getElementById("horarios-section");
+        container.innerHTML = "";
+        
+        data.forEach((horario, index) => {
+          const btn = document.createElement("button");
+          btn.className = "diagonal-button";
+          btn.textContent = `Horario ${horario.horario_id}`;
+          btn.onclick = () => setHorario(horario.horas);
+          btn.style.animationDelay = (index * 0.1) + 's';
+          btn.classList.add('fade-in-up');
+          container.appendChild(btn);
+        });
+      })
+      .catch(err => console.error('Error loading schedules:', err));
+  }
+
+  // Cargar ambos tipos
+  function loadHorariosAmbos() {
+    const promesaPrimaria = fetch('obtener_horarios.php?tipo=primaria').then(res => res.json());
+    const promesaSecundaria = fetch('obtener_horarios.php?tipo=secundaria').then(res => res.json());
+    
+    Promise.all([promesaPrimaria, promesaSecundaria])
+      .then(([dataPrimaria, dataSecundaria]) => {
+        const container = document.getElementById("horarios-section");
+        container.innerHTML = "";
+        let index = 0;
+        
+        // Primaria
+        dataPrimaria.forEach((horario) => {
+          const btn = document.createElement("button");
+          btn.className = "diagonal-button primaria-type";
+          btn.textContent = `Primaria ${horario.horario_id}`;
+          btn.onclick = () => setHorario(horario.horas);
+          btn.style.animationDelay = (index * 0.1) + 's';
+          btn.classList.add('fade-in-up');
+          container.appendChild(btn);
+          index++;
+        });
+        
+        // Secundaria
+        dataSecundaria.forEach((horario) => {
+          const btn = document.createElement("button");
+          btn.className = "diagonal-button secundaria-type";
+          btn.textContent = `Secundaria ${horario.horario_id}`;
+          btn.onclick = () => setHorario(horario.horas);
+          btn.style.animationDelay = (index * 0.1) + 's';
+          btn.classList.add('fade-in-up');
+          container.appendChild(btn);
+          index++;
+        });
+      })
+      .catch(err => console.error('Error loading schedules:', err));
+  }
+
+  // Configurar horario seleccionado
+  function setHorario(horas) {
+    schedule = horas.sort();
+    const timeline = document.getElementById("timeline-hours");
+    const bar = document.getElementById("timeline-bar");
+    timeline.innerHTML = "";
+    
+    // Limpiar burbujas existentes
+    bar.querySelectorAll('.bubble').forEach(bubble => bubble.remove());
+    
+    const scheduleMinutes = horas.map(time => {
+      const [h, m] = time.split(':').map(Number);
+      return { time, minutes: h * 60 + m };
+    }).sort((a, b) => a.minutes - b.minutes);
+    
+    if (scheduleMinutes.length === 0) return;
+    
+    const firstTime = scheduleMinutes[0].minutes;
+    const lastTime = scheduleMinutes[scheduleMinutes.length - 1].minutes;
+    const totalDuration = lastTime - firstTime;
+    
+    // Crear horas timeline
+    scheduleMinutes.forEach((item, index) => {
+      const span = document.createElement("span");
+      span.className = "timeline-hour";
+      span.textContent = item.time;
+      span.dataset.time = item.time;
+      
+      let position = totalDuration === 0 ? 50 : ((item.minutes - firstTime) / totalDuration) * 80 + 10;
+      span.style.left = position + '%';
+      span.style.animationDelay = (index * 0.1) + 's';
+      span.classList.add('fade-in-up');
+      timeline.appendChild(span);
+    });
+    
+    // Crear burbujas animadas
+    const bubbleCount = Math.min(20, Math.max(8, scheduleMinutes.length * 2));
+    for (let i = 0; i < bubbleCount; i++) {
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.style.animationDuration = (15 + Math.random() * 15) + "s";
+      bubble.style.animationDelay = (Math.random() * 5) + "s";
+      bubble.style.left = (Math.random() * 90) + "%";
+      bar.appendChild(bubble);
+    }
+    
+    updateNextTimbre();
+    updateTimelineProgress();
+  }
+
+  // === TIMELINE ===
+  function updateTimelineProgress() {
+    if (schedule.length === 0) return;
+    
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    
+    const scheduleMinutes = schedule.map(time => {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    });
+    
+    const firstTime = Math.min(...scheduleMinutes);
+    const lastTime = Math.max(...scheduleMinutes);
+    const totalDuration = lastTime - firstTime;
+    
+    let progress = 0;
+    if (currentTime <= firstTime) {
+      progress = 0;
+    } else if (currentTime >= lastTime) {
+      progress = 100;
+    } else {
+      const timeProgress = ((currentTime - firstTime) / totalDuration) * 80 + 10;
+      progress = Math.min(Math.max(timeProgress, 0), 100);
+    }
+    
+    document.getElementById('timeline-progress').style.width = progress + '%';
+    
+    // Actualizar estados horas
+    document.querySelectorAll('.timeline-hour').forEach(el => {
+      const [h, m] = el.dataset.time.split(':').map(Number);
+      const timeMinutes = h * 60 + m;
+      
+      el.classList.remove('active', 'passed');
+      
+      if (timeMinutes < currentTime) {
+        el.classList.add('passed');
+      } else if (nextTimbreTime && el.dataset.time === nextTimbreTime.toTimeString().slice(0,5)) {
+        el.classList.add('active');
+      }
+    });
+  }
+
+  // Actualizar próximo timbre
+  function updateNextTimbre() {
+    const now = new Date();
+    nextTimbreTime = null;
+    
+    schedule.forEach(h => {
+      const [hh, mm] = h.split(":");
+      const t = new Date();
+      t.setHours(+hh, +mm, 0, 0);
+      
+      if (t <= now) t.setDate(t.getDate() + 1);
+      
+      if (!nextTimbreTime || t < nextTimbreTime) {
+        nextTimbreTime = t;
+      }
+    });
+    
+    if (nextTimbreTime) {
+      startCountdown();
+    } else {
+      document.getElementById("next-timbre").innerText = "Siguiente en: --:--";
+    }
+  }
+
+  // Contador regresivo
+  function startCountdown() {
+    function update() {
+      if (!nextTimbreTime) return;
+      
+      const now = new Date();
+      const diff = nextTimbreTime - now;
+      
+      if (diff <= 0) {
+        updateNextTimbre();
+        return;
+      }
+      
+      const hours = Math.floor(diff / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      
+      let timeText = "Siguiente en: ";
+      if (hours > 0) {
+        timeText += `${hours}h ${minutes}m`;
+      } else if (minutes > 0) {
+        timeText += `${minutes}m ${seconds}s`;
+      } else {
+        timeText += `${seconds}s`;
+      }
+      
+      document.getElementById("next-timbre").innerText = timeText;
+      setTimeout(update, 1000);
+    }
+    update();
+  }
+
+  // === FORMULARIOS ===
+  function createTimeInput() {
+    const input = document.createElement("input");
+    input.type = "time";
+    input.name = "horas[]";
+    input.required = true;
+    return input;
+  }
+
+  function addHourInput() {
+    inputCount++;
+    const newInput = createTimeInput();
+    
+    const column1 = document.getElementById("column1");
+    const column2 = document.getElementById("column2");
+    
+    if (column1.children.length <= column2.children.length) {
+      column1.appendChild(newInput);
+    } else {
+      column2.appendChild(newInput);
+    }
+    
+    newInput.focus();
+  }
+
+  // === PREFERENCIAS ===
+  function loadUserPreferences() {
+    fetch('get_user_preferences.php')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.preferences) {
+          const theme = data.preferences.theme || 'light';
+          const sound = data.preferences.default_sound || 'img/timbre.mp3';
+          
+          document.body.setAttribute('data-theme', theme);
+          localStorage.setItem('theme-preference', theme);
+          
+          currentSound = sound;
+          localStorage.setItem('sound-preference', sound);
+          document.getElementById("timbre-sound").src = currentSound;
+          updateActiveSoundOption(sound);
+        } else {
+          loadLocalPreferences();
+        }
+      })
+      .catch(error => {
+        console.error('Error loading server preferences:', error);
+        loadLocalPreferences();
+      });
+  }
+
+  function loadLocalPreferences() {
+    const savedTheme = localStorage.getItem('theme-preference') || 'light';
+    document.body.setAttribute('data-theme', savedTheme);
+    
+    const savedSound = localStorage.getItem('sound-preference') || 'img/timbre.mp3';
+    currentSound = savedSound;
+    document.getElementById("timbre-sound").src = currentSound;
+    updateActiveSoundOption(savedSound);
+  }
+
+  function updateActiveSoundOption(soundPath) {
+    document.querySelectorAll('.sound-option').forEach(opt => opt.classList.remove('active'));
+    const savedOption = document.querySelector(`[data-sound="${soundPath}"]`);
+    if (savedOption) savedOption.classList.add('active');
+  }
+
+  function saveUserPreference(type, value) {
+    fetch('save_preferences.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: type, value: value })
+    }).catch(e => console.log('Error saving preference:', e));
+  }
+
+  // === MODAL ===
+  function switchTab(tabName) {
+    document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+  }
+
+  // === MANEJO ARCHIVOS ===
+  function setupFileUpload() {
+    const uploadArea = document.getElementById('fileUploadArea');
+    const fileInput = document.getElementById('fileUploadInput');
+    const preview = document.getElementById('filePreview');
+    const uploadBtn = document.getElementById('uploadFileBtn');
+
+    // Click para seleccionar archivo
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    // Drag & drop
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) handleFileSelection(files[0]);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) handleFileSelection(e.target.files[0]);
+    });
+
+    // Controles preview
+    document.getElementById('playPreview').addEventListener('click', () => {
+      const audio = document.getElementById('previewAudio');
+      if (audio.paused) {
+        audio.play();
+      } else {
+        audio.pause();
+      }
+    });
+
+    document.getElementById('removeFile').addEventListener('click', () => {
+      selectedFile = null;
+      preview.classList.remove('active');
+      uploadBtn.style.display = 'none';
+      fileInput.value = '';
+      document.getElementById('previewAudio').src = '';
+    });
+
+    // Subir archivo
+    uploadBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      
+      uploadBtn.textContent = 'Subiendo...';
+      uploadBtn.disabled = true;
+      
+      const formData = new FormData();
+      formData.append('custom_sound', selectedFile);
+      
+      try {
+        const response = await fetch('upload_sound.php', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          addCustomSoundOption(data.original_name, data.file_path);
+          selectSound(data.file_path);
+          
+          // Reset formulario
+          selectedFile = null;
+          preview.classList.remove('active');
+          uploadBtn.style.display = 'none';
+          fileInput.value = '';
+          
+          document.getElementById('formularioModal').style.display = 'none';
+          alert('Archivo subido exitosamente!');
+        } else {
+          alert('Error subiendo archivo: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        alert('Error subiendo archivo. Intente nuevamente.');
+      }
+      
+      uploadBtn.textContent = 'Subir Archivo';
+      uploadBtn.disabled = false;
+    });
+  }
+
+  async function handleFileSelection(file) {
+    const isValid = await validateAudioFile(file);
+    if (!isValid) return;
+    
+    selectedFile = file;
+    
+    // Mostrar info archivo
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatFileSize(file.size);
+    
+    // Preview
+    const fileUrl = URL.createObjectURL(file);
+    document.getElementById('previewAudio').src = fileUrl;
+    
+    document.getElementById('filePreview').classList.add('active');
+    document.getElementById('uploadFileBtn').style.display = 'block';
+  }
+
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // === INICIALIZACIÓN ===
+  document.addEventListener("DOMContentLoaded", () => {
+    // Cargar datos iniciales
+    loadUserPreferences();
+    updateClock();
+    setInterval(updateClock, 1000);
+    loadHorarios();
+    loadCustomSounds();
+    setupFileUpload();
+
+    // Event listeners principales
+    document.getElementById("themeToggle").addEventListener('click', toggleTheme);
+
+    document.getElementById("soundSelector").addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSoundDropdown();
+    });
+    
+    // Clicks sonidos y cerrar dropdown
+    document.addEventListener('click', (e) => {
+      const soundOption = e.target.closest('.sound-option[data-sound]');
+      if (soundOption) {
+        e.preventDefault();
+        e.stopPropagation();
+        selectSound(soundOption.dataset.sound);
+        return;
+      }
+      
+      if (!e.target.closest('.sound-selector')) {
+        document.getElementById('soundDropdown').classList.remove('active');
+      }
+    });
+
+    document.getElementById("customSound").addEventListener('change', handleCustomSound);
+
+    // Botones tipo
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchType(btn.dataset.type));
+    });
+
+    // Modal
+    document.getElementById("abrirFormulario").onclick = () => {
+      document.getElementById("formularioModal").style.display = 'block';
+    };
+    
+    document.getElementById("cerrarFormulario").onclick = () => {
+      document.getElementById("formularioModal").style.display = 'none';
+    };
+
+    // Pestañas modal
+    document.querySelectorAll('.modal-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        switchTab(tab.dataset.tab);
+      });
+    });
+
+    // Crear inputs iniciales (3 por columna)
+    const column1 = document.getElementById("column1");
+    const column2 = document.getElementById("column2");
+    
+    for (let i = 0; i < 3; i++) {
+      column1.appendChild(createTimeInput());
+      column2.appendChild(createTimeInput());
+    }
+
+    document.getElementById("addHourBtn").onclick = addHourInput;
+
+    // Posición mouse para efecto tema
+    document.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth) * 100;
+      mouseY = (e.clientY / window.innerHeight) * 100;
+    });
+
+    // Cerrar modal al hacer click fuera
+    window.onclick = (e) => {
+      const modal = document.getElementById("formularioModal");
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    };
+
+    // Atajos teclado
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+          case 't':
+            e.preventDefault();
+            toggleTheme();
+            break;
+          case ' ':
+            e.preventDefault();
+            playTimbre();
+            break;
+          case 'n':
+            e.preventDefault();
+            document.getElementById("abrirFormulario").click();
+            break;
+        }
+      }
+    });
+
+    // Animación pulse
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+    `;
+    document.head.appendChild(style);
+
+    console.log('🔔 Sistema de Timbre Unificado inicializado correctamente');
+    console.log('⌨️ Atajos: Ctrl+T (tema), Ctrl+Space (timbre), Ctrl+N (nuevo horario)');
+    console.log('🎵 Funciones nuevas: Modo "Ambos", Upload de archivos, Cambio inmediato de sonidos');
+  });
+  </script>
+</body>
+</html>
